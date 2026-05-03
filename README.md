@@ -42,13 +42,15 @@ This project demonstrates an end-to-end ML workflow: data ingestion, model train
 
 ```
 housing-ml-model/
-├── train.py                          # Model training script
-├── main.py                           # FastAPI application and prediction endpoint
-├── california_housing_model.joblib   # Serialized trained model
-└── requirements.txt                  # Python dependencies
+├── train.py                # Model training script
+├── main.py                 # FastAPI application and prediction endpoint
+├── templates/
+│   └── index.html          # Web form UI for general users
+├── Procfile                # Start command for Render / Railway
+└── requirements.txt        # Python dependencies
 ```
 
-## How to Run
+## How to Run Locally
 
 **1. Set up the environment**
 ```bash
@@ -57,17 +59,14 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**2. Train the model**
-```bash
-python train.py
-```
-
-**3. Start the API**
+**2. Start the API** (the model is trained automatically on first startup if needed)
 ```bash
 uvicorn main:app --reload
 ```
 
-**4. Make a prediction**
+Open `http://127.0.0.1:8000` in your browser to use the prediction form, or visit `http://127.0.0.1:8000/docs` for the interactive API docs.
+
+**3. Make a prediction via API**
 
 Send a POST request to `http://127.0.0.1:8000/predict`:
 
@@ -81,4 +80,13 @@ Send a POST request to `http://127.0.0.1:8000/predict`:
 }
 ```
 
-Interactive API docs are available at `http://127.0.0.1:8000/docs`.
+## Deploy to Render (free tier)
+
+1. Push this repository to GitHub.
+2. Go to [render.com](https://render.com) → **New → Web Service** → connect your repo.
+3. Set the following:
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
+4. Click **Deploy**. Render will assign a public `https://<your-app>.onrender.com` URL.
+
+The model is trained automatically on first startup — no pre-built binary needs to be committed.

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>California Housing Price Predictor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.10);
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      color: #1a202c;
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      font-size: 0.875rem;
+      color: #718096;
+      margin-bottom: 2rem;
+    }
+
+    .field {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 0.35rem;
+    }
+
+    .field-hint {
+      font-size: 0.75rem;
+      color: #a0aec0;
+      margin-bottom: 0.35rem;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 0.6rem 0.85rem;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: #2d3748;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      appearance: textfield;
+    }
+
+    input[type="number"]:focus {
+      outline: none;
+      border-color: #4299e1;
+      box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.25);
+    }
+
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      background: #3182ce;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: background 0.15s;
+    }
+
+    button:hover { background: #2b6cb0; }
+    button:disabled { background: #90cdf4; cursor: not-allowed; }
+
+    #result {
+      margin-top: 1.5rem;
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      display: none;
+    }
+
+    #result.success {
+      background: #ebf8ff;
+      border: 1px solid #bee3f8;
+      color: #2c5282;
+    }
+
+    #result.error {
+      background: #fff5f5;
+      border: 1px solid #fed7d7;
+      color: #c53030;
+    }
+
+    .prediction-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #2b6cb0;
+      margin-top: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🏠 Housing Price Predictor</h1>
+    <p class="subtitle">California block-group estimates based on the 1990 Census</p>
+
+    <form id="predict-form">
+      <div class="field">
+        <label for="MedInc">Median Income</label>
+        <p class="field-hint">Median household income in the block group (tens of thousands USD)</p>
+        <input type="number" id="MedInc" name="MedInc" step="any" placeholder="e.g. 8.33" required />
+      </div>
+
+      <div class="field">
+        <label for="HouseAge">House Age</label>
+        <p class="field-hint">Median age of housing units in the block group (years)</p>
+        <input type="number" id="HouseAge" name="HouseAge" step="any" placeholder="e.g. 41" required />
+      </div>
+
+      <div class="field">
+        <label for="AveRooms">Average Rooms</label>
+        <p class="field-hint">Average number of rooms per household</p>
+        <input type="number" id="AveRooms" name="AveRooms" step="any" placeholder="e.g. 6.98" required />
+      </div>
+
+      <div class="field">
+        <label for="AveBedrms">Average Bedrooms</label>
+        <p class="field-hint">Average number of bedrooms per household</p>
+        <input type="number" id="AveBedrms" name="AveBedrms" step="any" placeholder="e.g. 1.02" required />
+      </div>
+
+      <div class="field">
+        <label for="Population">Population</label>
+        <p class="field-hint">Total population of the block group</p>
+        <input type="number" id="Population" name="Population" step="any" placeholder="e.g. 322" required />
+      </div>
+
+      <button type="submit" id="submit-btn">Predict Price</button>
+    </form>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    document.getElementById('predict-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submit-btn');
+      const resultBox = document.getElementById('result');
+
+      btn.disabled = true;
+      btn.textContent = 'Predicting…';
+      resultBox.style.display = 'none';
+
+      const payload = {
+        MedInc:     parseFloat(document.getElementById('MedInc').value),
+        HouseAge:   parseFloat(document.getElementById('HouseAge').value),
+        AveRooms:   parseFloat(document.getElementById('AveRooms').value),
+        AveBedrms:  parseFloat(document.getElementById('AveBedrms').value),
+        Population: parseFloat(document.getElementById('Population').value),
+      };
+
+      try {
+        const resp = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+          throw new Error(err.detail || resp.statusText);
+        }
+
+        const data = await resp.json();
+        const dollars = (data.predicted_median_house_value * 100000).toLocaleString('en-US', {
+          style: 'currency', currency: 'USD', maximumFractionDigits: 0,
+        });
+
+        resultBox.className = 'success';
+        resultBox.innerHTML = `
+          <div>Estimated median house value</div>
+          <div class="prediction-value">${dollars}</div>
+          <div style="font-size:0.75rem;color:#718096;margin-top:0.4rem;">
+            Raw model output: ${data.predicted_median_house_value.toFixed(4)} (×$100k)
+          </div>`;
+      } catch (err) {
+        resultBox.className = 'error';
+        resultBox.textContent = `Error: ${err.message}`;
+      } finally {
+        resultBox.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Predict Price';
+      }
+    });
+  </script>
+</body>
+</html>
