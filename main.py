@@ -33,8 +33,8 @@ class HouseFeatures(BaseModel):
     AveBedrms: float   # Average number of bedrooms per household
     Population: float  # Block group population
 
-    class Config:
-        schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "MedInc": 8.3252,
                 "HouseAge": 41.0,
@@ -43,6 +43,7 @@ class HouseFeatures(BaseModel):
                 "Population": 322.0,
             }
         }
+    }
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -54,6 +55,6 @@ def index(request: Request):
 @app.post("/predict")
 def predict_price(features: HouseFeatures):
     """Predicts the median house value based on input features."""
-    input_data = pd.DataFrame([features.dict()])
+    input_data = pd.DataFrame([features.model_dump()])
     prediction = model.predict(input_data)
     return {"predicted_median_house_value": float(prediction[0])}
